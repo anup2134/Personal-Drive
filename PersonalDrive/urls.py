@@ -16,7 +16,9 @@ Including another URLconf
 """
 from django.urls import path
 from storage.views.file_views import FileUploadView
+from storage.views.query_views import QueryDocView
 
 urlpatterns = [
-    path('api/v1/file', FileUploadView.as_view(), name='file-upload'),
+    path('api/v1/file/pdf/upload/', FileUploadView.as_view(), name='file-upload'),
+    path('api/v1/file/pdf/query/', QueryDocView.as_view(), name='file-query'),
 ]

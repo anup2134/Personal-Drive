@@ -1,5 +1,4 @@
 import tempfile
-# import os
 from django.conf import settings
 
 from rest_framework.views import APIView 
@@ -27,7 +26,6 @@ class FileUploadView(APIView):
             temp_file.write(uploaded_file.read())
             temp_file_path = temp_file.name
 
-        # Parse pdf file and divide text into smaller chunks:
         loader = PyPDFLoader(temp_file_path)
         docs = loader.load()
         
@@ -42,15 +40,11 @@ class FileUploadView(APIView):
         if not settings.PINECONE_API_KEY:
             raise ValueError("Pinecone api key not found")
         
-        # Connect to pinecone v-db:
         pc = Pinecone(settings.PINECONE_API_KEY)
         index = pc.Index('personal-drive')
 
-        # embedding model:
         embeddings = OllamaEmbeddings(model="mxbai-embed-large")
         vector_store = PineconeVectorStore(embedding=embeddings, index=index)
         vector_store.add_documents(documents=all_splits)
-
-
 
         return Response({'file_name': uploaded_file.name,'file_type':file_type,'name':name}, status=status.HTTP_201_CREATED)

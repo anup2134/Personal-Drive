@@ -39,6 +39,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 # Application definition
 
+AUTH_USER_MODEL = "users.User"
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

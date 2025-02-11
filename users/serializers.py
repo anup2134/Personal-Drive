@@ -15,3 +15,4 @@ class UserSerializer(serializers.ModelSerializer):
             f_name=validated_data["f_name"],
             l_name= "" if "l_name" not in validated_data else validated_data['l_name']
         )
+

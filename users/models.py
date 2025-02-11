@@ -1,5 +1,8 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser,BaseUserManager
+from django.utils import timezone
+from datetime import timedelta
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -23,7 +26,7 @@ class User(AbstractBaseUser):
         (LOCAL, "Local Authentication"),
         (GOOGLE, "Google OAuth2.0"),
     ]
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True,db_index=True)
     f_name = models.CharField(max_length=20,blank=False,null=False)
     l_name = models.CharField(max_length=20,blank=True)
     auth_type = models.CharField(max_length=10, choices=AUTH_CHOICES,default=LOCAL) 
@@ -41,3 +44,10 @@ class Group(models.Model):
     name = models.CharField(max_length=20,blank=False,null=False)
     admins = models.ManyToManyField(User, blank=True, related_name="admin_groups")
     users = models.ManyToManyField(User, blank=True, related_name="user_groups")
+
+def one_hour_from_now():
+    return timezone.now() + timedelta(hours=1)
+class EmailVerificationToken(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    token = models.CharField(max_length=255, unique=True, default=uuid.uuid4,db_index=True)
+    expires_at = models.DateTimeField(default=one_hour_from_now)

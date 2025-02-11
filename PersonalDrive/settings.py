@@ -16,9 +16,16 @@ import os
 
 load_dotenv()
 # environment variables
-
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
 # MISTRALAI_API_KEY = os.getenv("MISTRALAI_API_KEY")
+
+# email
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"  # For Gmail
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "anup.s.bhoos@gmail.com"
+EMAIL_HOST_PASSWORD = "hfuw gjfc lsft rbph" 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,14 +38,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-@#t!cfd-=xd4mn76#%43@pmh-74p)2!jdj1d#wgz#m41%u0@&y'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = (os.getenv("ENV") == "DEVELOPMENT")
 
 ALLOWED_HOSTS = []
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-# Application definition
 
+# Application definition
 AUTH_USER_MODEL = "users.User"
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -51,6 +58,8 @@ INSTALLED_APPS = [
     'users',
     'storage',
 ]
+
+# rest framework
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -17,10 +17,14 @@ Including another URLconf
 from django.urls import path,include
 from storage.views.file_views import FileUploadView
 from storage.views.query_views import QueryDocView
-from users.views import router
+from users.views.users import router
+from users.views.verify_email import verify_email
+from users.views.users import destroy
 
 urlpatterns = [
     path('api/v1/file/pdf/upload/', FileUploadView.as_view(), name='file-upload'),
     path('api/v1/file/pdf/query/', QueryDocView.as_view(), name='file-query'),
-    path('',include(router.urls))
+    path('',include(router.urls)),
+    path('api/v1/user/verify_email/<str:token>/',verify_email,name="verify-email"),
+    path('api/v1/user/delete/',destroy,name="delete-user"),
 ]

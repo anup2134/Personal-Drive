@@ -19,7 +19,8 @@ def create_verification_token(sender, instance, created, **kwargs):
         try:
             send_mail(
                 subject="Email Verification Personal Drive",
-                message=f"Welcome to Personal Drive.Click or copy the following link in your browser to verify you email.\nhttp://127.0.0.1:8000/api/v1/user/verify_email/{token}", # edit in prod to be a frontend app link
+                # message=f"Welcome to Personal Drive.Click or copy the following link in your browser to verify you email.\nhttp://127.0.0.1:8000/api/v1/user/verify_email/{token}", # edit in prod to be a frontend app link
+                message=f"Welcome to Personal Drive. Click or copy the following link in your browser to verify you email.\nhttp://localhost:5173/verify_email/?token={token}",
                 from_email=settings.EMAIL_HOST_USER,
                 recipient_list=[instance.email],
                 fail_silently=False,

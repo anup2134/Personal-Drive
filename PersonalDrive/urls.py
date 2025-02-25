@@ -17,9 +17,11 @@ Including another URLconf
 from django.urls import path,include
 from storage.views.file_views import FileUploadView
 from storage.views.query_views import QueryDocView
-from users.views.users import router
+from users.views.users import router,google_user_signup
 from users.views.verify_email import verify_email
-from users.views.users import destroy
+from users.views.users import (destroy,get_verified_users,get_users_id)
+from users.views.token_views import CookieTokenObtainPairView,CookieTokenRefreshView,check_cookie
+
 
 urlpatterns = [
     path('api/v1/file/pdf/upload/', FileUploadView.as_view(), name='file-upload'),
@@ -27,4 +29,10 @@ urlpatterns = [
     path('',include(router.urls)),
     path('api/v1/user/verify_email/<str:token>/',verify_email,name="verify-email"),
     path('api/v1/user/delete/',destroy,name="delete-user"),
+    path('api/v1/user/tokens/', CookieTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/v1/user/token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
+    path('api/v1/user/list/verified/',get_verified_users,name="verified-list"),
+    path('api/v1/user/list/users/',get_users_id,name="id-list"),
+    path('api/v1/user/cookies/',check_cookie,name="cookies-check"),
+    path('api/v1/user/google/auth/',google_user_signup,name="google-auth")
 ]

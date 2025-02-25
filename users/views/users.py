@@ -1,16 +1,27 @@
 from rest_framework import viewsets
 from rest_framework.response import Response
-from ..serializers import UserSerializer
+from ..serializers import UserSerializer,GoogleUserSerializer
 from ..models import User
 from rest_framework import status
 from rest_framework.routers import DefaultRouter
 from django.conf import settings
 from rest_framework.decorators import api_view
+import requests
+from rest_framework_simplejwt.tokens import RefreshToken
+
+def get_tokens_for_user(user):
+    refresh = RefreshToken.for_user(user)
+    return {
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+    }
 
 class RegisterViewSet(viewsets.ViewSet):
     def create(self, request):
         serializer = UserSerializer(data=request.data)
         if not serializer.is_valid():
+            if 'email' in serializer.errors:
+                return Response({"message":"user already exists"},status=status.HTTP_400_BAD_REQUEST)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         serializer.save()
@@ -25,21 +36,80 @@ class RegisterViewSet(viewsets.ViewSet):
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+router = DefaultRouter()
+router.register("api/v1/user/register",RegisterViewSet,basename="user-register")
+
 # disabled in production
 @api_view(["DELETE"])
 def destroy(request):
     if not settings.DEBUG:  
         return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
-    email = request.query_params.get("email")
     # print(email)
-    if not email:
-        return Response({"message":"failed to delete"},status=status.HTTP_400_BAD_REQUEST)
-    try:
-        user = User.objects.get(email=email)
-        user.delete()
-        return Response({"message":"user deleted successfully"},status=status.HTTP_204_NO_CONTENT)
-    except User.DoesNotExist:
-        return Response({"message": "user not found"}, status=status.HTTP_404_NOT_FOUND)
 
-router = DefaultRouter()
-router.register("api/v1/user/register",RegisterViewSet,basename="user-register")
+    User.objects.all().delete()
+    return Response({"message":"all users deleted successfully"},status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+def get_verified_users(request):
+    if not settings.DEBUG:  
+        return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
+    verified = User.objects.filter(is_active=True)
+    verified_users = [{"password": user.password, "email": user.email} for user in verified]
+    
+    return Response({'verified users':verified_users},status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+def get_users_id(request):
+    if not settings.DEBUG:  
+        return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
+    users = User.objects.all()
+    user_list = [{"id": user.id, "email": user.email} for user in users]
+    
+    return Response({'users':user_list},status=status.HTTP_200_OK)
+
+@api_view(["POST"])
+def google_user_signup(request):
+    if 'access_token' not in request.data:
+        return Response({"message":"invalid token"},status=status.HTTP_400_BAD_REQUEST)
+    access_token = request.data['access_token']
+    user_info_url = f"https://www.googleapis.com/oauth2/v2/userinfo?access_token={access_token}"
+    response = requests.get(user_info_url)
+    if response.status_code != 200:
+        return Response({"message":"google auth failed"},status=status.HTTP_400_BAD_REQUEST)
+    response = response.json()
+    data = {
+        "email": response["email"],
+        "f_name": response["given_name"],
+        "l_name": response["family_name"],
+        "picture": response["picture"],
+    }
+    serializer = GoogleUserSerializer(data=data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = serializer.save()
+    tokens = get_tokens_for_user(user)
+    response = Response({"message":"google auth successful"},status=status.HTTP_200_OK)
+    response.set_cookie(
+        key="access_token",
+        value=tokens['access'],
+        httponly=True,  
+        secure=True,   # set true in production 
+        samesite="None",
+        max_age=15 * 60
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens['refresh'],
+        httponly=True,
+        secure=True,   #set true in production
+        samesite="None",
+        max_age=7 * 24 * 60 * 60
+    )
+
+    return response
+
+
+    

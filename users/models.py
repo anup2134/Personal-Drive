@@ -5,17 +5,22 @@ from django.utils import timezone
 from datetime import timedelta
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, password=None, **extra_fields):
+    def create_user(self, email,auth_type, password=None,**extra_fields):
         if not email:
             raise ValueError("The Email field must be set")
-        
+
         email = self.normalize_email(email).lower()
-        user = self.model(email=email, auth_type=User.LOCAL, **extra_fields)
-        
-        if password:
+        user = self.model(email=email, auth_type=User.LOCAL if auth_type == 'local' else User.GOOGLE, **extra_fields)
+
+        if password and auth_type == 'local':
             user.set_password(password)  # Hash password
+        elif not password and auth_type == 'google':
+            user.set_unusable_password()  # Prevent accidental login attempts
+        else:
+            raise ValueError("password error")
         user.save(using=self._db)
         return user
+    
 
 
 class User(AbstractBaseUser):
@@ -29,10 +34,10 @@ class User(AbstractBaseUser):
     email = models.EmailField(unique=True,db_index=True)
     f_name = models.CharField(max_length=20,blank=False,null=False)
     l_name = models.CharField(max_length=20,blank=True)
-    auth_type = models.CharField(max_length=10, choices=AUTH_CHOICES,default=LOCAL) 
+    auth_type = models.CharField(max_length=10, choices=AUTH_CHOICES,default=LOCAL)
     password = models.CharField(max_length=128, blank=True, null=True)  # Only for local users
-    google_id = models.CharField(max_length=255, unique=True, blank=True, null=True) # Only for google users
-    is_active = models.BooleanField(default=True)
+    picture = models.URLField(blank=True,null=True)
+    is_active = models.BooleanField(default=False)
     objects = UserManager()
 
     USERNAME_FIELD = "email"

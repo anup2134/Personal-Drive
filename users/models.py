@@ -11,6 +11,7 @@ class UserManager(BaseUserManager):
 
         email = self.normalize_email(email).lower()
         user = self.model(email=email, auth_type=User.LOCAL if auth_type == 'local' else User.GOOGLE, **extra_fields)
+        
 
         if password and auth_type == 'local':
             user.set_password(password)  # Hash password
@@ -20,7 +21,6 @@ class UserManager(BaseUserManager):
             raise ValueError("password error")
         user.save(using=self._db)
         return user
-    
 
 
 class User(AbstractBaseUser):
@@ -38,20 +38,21 @@ class User(AbstractBaseUser):
     password = models.CharField(max_length=128, blank=True, null=True)  # Only for local users
     picture = models.URLField(blank=True,null=True)
     is_active = models.BooleanField(default=False)
+    limit = models.FloatField(default=0.0)
     objects = UserManager()
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ['f_name']
 
-
 class Group(models.Model):
     owner = models.ForeignKey(User,null=False,on_delete=models.CASCADE)
     name = models.CharField(max_length=20,blank=False,null=False)
-    admins = models.ManyToManyField(User, blank=True, related_name="admin_groups")
-    users = models.ManyToManyField(User, blank=True, related_name="user_groups")
+    admins = models.ManyToManyField(User, blank=True, related_name="group_admin")
+    users = models.ManyToManyField(User, blank=True, related_name="group_users")
 
 def one_hour_from_now():
     return timezone.now() + timedelta(hours=1)
+
 class EmailVerificationToken(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     token = models.CharField(max_length=255, unique=True, default=uuid.uuid4,db_index=True)

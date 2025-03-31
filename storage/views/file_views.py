@@ -1,50 +1,119 @@
-import tempfile
-from django.conf import settings
-
 from rest_framework.views import APIView 
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed
 
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_pinecone import PineconeVectorStore
-from langchain_ollama import OllamaEmbeddings
-from pinecone import Pinecone
+from django.utils import timezone
+from django.conf import settings
+
+from users.auth_class import AccessTokenAuthentication
+from ..models import File
+from ..tasks.doc_parsing import process_text
+
+import boto3
+import os
+
+def upload_to_s3(file):
+    s3_client = boto3.client(
+        "s3",
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name=settings.AWS_S3_REGION_NAME
+    )
+
+    s3_key = f"uploads/{file.name}"
+    s3_client.upload_fileobj(
+        file, 
+        settings.AWS_STORAGE_BUCKET_NAME, 
+        s3_key,
+        ExtraArgs={"ContentType": file.content_type}
+    )
+    
+    file_url = f"{settings.AWS_S3_CUSTOM_DOMAIN}/{s3_key}"
+    return file_url
+
+def save_uploaded_file_temporarily(uploaded_file):
+    if not uploaded_file:
+        return
+    try:
+        os.makedirs("temp_files", exist_ok=True)
+        filename = os.path.basename(uploaded_file.name)
+        destination_path = os.path.join("temp_files", filename)
+
+        with open(destination_path, 'wb+') as destination:
+            for chunk in uploaded_file.chunks():
+                destination.write(chunk)
+
+        return destination_path
+    
+    except Exception as e:
+        print(f"Error saving file: {e}")
+        return None
 
 
 class FileUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
-
+    authentication_classes = [AccessTokenAuthentication]
     def post(self, request):
         uploaded_file = request.FILES.get('file')
-        name = request.data.get('name')
+            
         if not uploaded_file:
             return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
-        file_type = uploaded_file.content_type
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
-            temp_file.write(uploaded_file.read())
-            temp_file_path = temp_file.name
-
-        loader = PyPDFLoader(temp_file_path)
-        docs = loader.load()
         
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000, chunk_overlap=200, add_start_index=True
+        user = request.user
+        if not user:
+            raise AuthenticationFailed("no user found")
+        
+        
+        file_size = uploaded_file.size / (1024 * 1024)
+        file = File.objects.create(
+            name=uploaded_file.name,url="https://www.dummyurl.com",obj_type=uploaded_file.content_type,user=user
         )
-        all_splits = text_splitter.split_documents(docs)
 
-        for split in all_splits:
-            split.metadata['source'] = name
+        user.limit = user.limit + file_size
 
-        if not settings.PINECONE_API_KEY:
-            raise ValueError("Pinecone api key not found")
+        ALLOWED_TYPES = {
+            "application/pdf",  # PDF files
+            "application/msword",  # DOC (old Word format)
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # DOCX (new Word format)
+            "text/plain",  # Plain text files
+        }
         
-        pc = Pinecone(settings.PINECONE_API_KEY)
-        index = pc.Index('personal-drive')
+        if uploaded_file.content_type in ALLOWED_TYPES:
+            path = save_uploaded_file_temporarily(uploaded_file)
+            print(path)
+        else:
+            upload_to_s3(uploaded_file)
+        try:
+            user.save() 
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        file.save()
+        
 
-        embeddings = OllamaEmbeddings(model="mxbai-embed-large")
-        vector_store = PineconeVectorStore(embedding=embeddings, index=index)
-        vector_store.add_documents(documents=all_splits)
+        response = Response({'file_name': uploaded_file.name,'file type':uploaded_file.content_type}, status=status.HTTP_201_CREATED)
+        response.set_cookie(
+            key="access_token",
+            value=request.COOKIES.get("access_token"),
+            httponly=True,
+            secure=True,
+            samesite="None",
+            max_age=15 * 60
+        )
+        return response
+    
+    def get(self,request):
+        if not settings.DEBUG:  
+            return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
+        files = File.objects.all()
+        files = [{"url":doc.url,"user":doc.user.email} for doc in files]
+        
+        return Response({'all documents':files},status=status.HTTP_200_OK)
 
-        return Response({'file_name': uploaded_file.name,'file_type':file_type,'name':name}, status=status.HTTP_201_CREATED)
+    def delete(self,request):
+        if not settings.DEBUG:
+            return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
+
+        File.objects.all().delete()
+        return Response({"message":"all docs deleted successfully"},status=status.HTTP_204_NO_CONTENT)

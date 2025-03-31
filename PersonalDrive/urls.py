@@ -20,7 +20,7 @@ from storage.views.query_views import QueryDocView
 from users.views.users import router,google_user_signup
 from users.views.verify_email import verify_email
 from users.views.users import (destroy,get_verified_users,get_users_id)
-from users.views.token_views import CookieTokenObtainPairView,CookieTokenRefreshView,check_cookie
+from users.views.token_views import CookieTokenObtainPairView,CookieTokenRefreshView
 
 
 urlpatterns = [
@@ -33,6 +33,5 @@ urlpatterns = [
     path('api/v1/user/token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/user/list/verified/',get_verified_users,name="verified-list"),
     path('api/v1/user/list/users/',get_users_id,name="id-list"),
-    path('api/v1/user/cookies/',check_cookie,name="cookies-check"),
     path('api/v1/user/google/auth/',google_user_signup,name="google-auth")
 ]

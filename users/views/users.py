@@ -55,8 +55,8 @@ def get_verified_users(request):
     if not settings.DEBUG:  
         return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
     verified = User.objects.filter(is_active=True)
-    verified_users = [{"password": user.password, "email": user.email} for user in verified]
-    
+    verified_users = [{"password": user.password, "email": user.email,"limit":user.limit} for user in verified]
+    # print(verified_users)
     return Response({'verified users':verified_users},status=status.HTTP_200_OK)
 
 @api_view(["GET"])

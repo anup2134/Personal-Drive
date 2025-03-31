@@ -4,6 +4,7 @@ from rest_framework import status
 from users.models import EmailVerificationToken
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
+from storage.models import Folder
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -26,12 +27,13 @@ def verify_email(request,token):
         tokens = get_tokens_for_user(user)
 
         response = Response({"message":"email verified successfully"},status=status.HTTP_200_OK)
-        # print(tokens['access'],tokens['refresh'])
+        Folder.objects.create(name="root",user=user)
+
         response.set_cookie(
             key="access_token",
             value=tokens['access'],
             httponly=True,  
-            secure=True,   # set true in production 
+            secure=True,   
             samesite="None",
             max_age=15 * 60
         )
@@ -40,7 +42,7 @@ def verify_email(request,token):
             key="refresh_token",
             value=tokens['refresh'],
             httponly=True,
-            secure=True,   #set true in production
+            secure=True, 
             samesite="None",
             max_age=7 * 24 * 60 * 60
         )

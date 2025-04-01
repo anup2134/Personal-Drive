@@ -13,11 +13,15 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+from datetime import timedelta
 
 load_dotenv()
-# environment variables
+
+# doc retrieval
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
-# MISTRALAI_API_KEY = os.getenv("MISTRALAI_API_KEY")
+MISTRALAI_API_KEY = os.getenv("MISTRALAI_API_KEY")
+HF_TOKEN = os.getenv("HT_TOKEN")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # email
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -29,6 +33,11 @@ EMAIL_HOST_PASSWORD = "hfuw gjfc lsft rbph"
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+}
 
 
 # Quick-start development settings - unsuitable for production

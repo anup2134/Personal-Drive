@@ -1,40 +1,42 @@
-import tempfile
 from celery import shared_task
+import os
+
 from django.conf import settings
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.vectorstores import Pinecone as PineconeVectorStore
-from langchain_community.embeddings.ollama import OllamaEmbeddings
-from pinecone import Pinecone
+from langchain_pinecone import PineconeVectorStore
+from langchain_ollama import OllamaEmbeddings
+
+from utils.upload_to_s3 import upload_to_s3
+from ..models import File
 
 @shared_task
-def process_text(file_path, name):
+def process_text(path, file_id,content_type):
     try:
-        loader = PyPDFLoader(file_path)
+        file = File.objects.get(pk=file_id)
+        # file.url = upload_to_s3(file_id,path,content_type)
+        # file.save()
+        loader = PyPDFLoader(path)
         docs = loader.load()
         
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000, chunk_overlap=200, add_start_index=True
         )
         all_splits = text_splitter.split_documents(docs)
-
-        for split in all_splits:
-            split.metadata['source'] = name
-
         if not settings.PINECONE_API_KEY:
             raise ValueError("Pinecone API key not found")
 
-
-        pc = Pinecone(settings.PINECONE_API_KEY)
-        index = pc.Index('personal-drive')
-
+        index_name = "personal-drive"
         embeddings = OllamaEmbeddings(model="mxbai-embed-large")
-        vector_store = PineconeVectorStore(embedding=embeddings, index=index)
-        vector_store.add_documents(documents=all_splits)
+        PineconeVectorStore.from_documents(
+            documents=all_splits,
+            embedding=embeddings,
+            index_name=index_name,
+            namespace=str(file_id),
+        )
 
-        doc = File.objects.get(id=doc_id)
-        doc.processed = True
-        doc.save()
-
+        os.remove(path)
     except Exception as e:
+        os.remove(path)
         print(f"Error in Celery task: {str(e)}")

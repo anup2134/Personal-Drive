@@ -12,12 +12,15 @@ class Folder(models.Model):
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
 
     class Meta:
-        unique_together = ('name', 'parent', 'group', 'user')
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'parent', 'user'], name='unique_name_parent_user'),
+            models.UniqueConstraint(fields=['name', 'parent', 'group'], name='unique_name_parent_group'),
+        ]
 
     def clean(self):
-        if self.user_owner and self.group_owner:
+        if self.user and self.group:
             raise ValidationError("Only one of user_owner or group_owner should be set.")
-        if not self.user_owner and not self.group_owner:
+        if not self.user and not self.group:
             raise ValidationError("One of user_owner or group_owner must be set.")
 
     def save(self, *args, **kwargs):
@@ -38,16 +41,21 @@ class File(models.Model):
     access = models.CharField(max_length=7,choices=ACCESS_CHOICE,default=ACCESS_CHOICE[1][0])
     user = models.ForeignKey(User, blank=True, null=True, related_name="files",on_delete=models.CASCADE)
     group = models.ForeignKey(Group, blank=True,null=True, related_name="files",on_delete=models.CASCADE)
-    folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='files', null=True, blank=True)
+    folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='files', null=True,blank=True)
 
     class Meta:
-        unique_together = ('name', 'folder', 'user', 'group')
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'folder', 'user'], name='unique_name_folder_user'),
+            models.UniqueConstraint(fields=['name', 'folder', 'group'], name='unique_name_folder_group'),
+        ]
 
     def clean(self):
-        if self.user_owner and self.group_owner:
-            raise ValidationError("Only one of user_owner or group_owner should be set.")
-        if not self.user_owner and not self.group_owner:
-            raise ValidationError("One of user_owner or group_owner must be set.")
+        if self.user and self.group:
+            raise ValidationError("Only one of user or group should be set.")
+        if not self.user and not self.group:
+            raise ValidationError("One of user or group must be set.")
+        if not self.folder:
+            raise ValidationError("File must belong to a folder.")
 
     def save(self, *args, **kwargs):
         self.clean()

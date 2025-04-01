@@ -11,12 +11,11 @@ class UserManager(BaseUserManager):
 
         email = self.normalize_email(email).lower()
         user = self.model(email=email, auth_type=User.LOCAL if auth_type == 'local' else User.GOOGLE, **extra_fields)
-        
 
         if password and auth_type == 'local':
-            user.set_password(password)  # Hash password
+            user.set_password(password)
         elif not password and auth_type == 'google':
-            user.set_unusable_password()  # Prevent accidental login attempts
+            user.set_unusable_password()
         else:
             raise ValueError("password error")
         user.save(using=self._db)

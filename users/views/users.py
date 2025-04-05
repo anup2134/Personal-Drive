@@ -5,9 +5,10 @@ from ..models import User
 from rest_framework import status
 from rest_framework.routers import DefaultRouter
 from django.conf import settings
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view,authentication_classes
 import requests
 from rest_framework_simplejwt.tokens import RefreshToken
+from ..auth_class import AccessTokenAuthentication
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -33,6 +34,7 @@ class RegisterViewSet(viewsets.ViewSet):
             return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
         
         users = User.objects.all()
+        # print(request.user)
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -112,4 +114,30 @@ def google_user_signup(request):
     return response
 
 
+@api_view(["GET"])
+@authentication_classes([AccessTokenAuthentication])
+def get_user(request):
+    if not request.user:
+        return Response({"message":"not user found"},status=status.HTTP_204_NO_CONTENT)
+    user  = request.user
+    user = {
+        "f_name":user.f_name,
+        "l_name":user.l_name,
+        "id":user.id,
+        "email":user.email,
+        "picture":user.picture,
+        "limit":user.limit
+    }
+
+    response = Response({"user":user})
+    response.set_cookie(
+        key="access_token",
+        value=request.COOKIES.get("access_token"),
+        httponly=True,
+        secure=True,
+        samesite="None",
+        max_age=15 * 60
+    )
+
+    return response
     

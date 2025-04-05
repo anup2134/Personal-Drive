@@ -7,8 +7,7 @@ from rest_framework import status
 
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone
-from langchain.chat_models import init_chat_model
-from langchain_ollama import OllamaEmbeddings
+# from langchain_ollama import OllamaEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from users.auth_class import AccessTokenAuthentication

@@ -1,19 +1,29 @@
 from rest_framework_simplejwt.views import TokenObtainPairView,TokenRefreshView
-from rest_framework.decorators import api_view  
-from rest_framework.response import Response
-from rest_framework import status
+from ..models import User
 
 class CookieTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
+
         access = response.data.pop("access")
         refresh = response.data.pop("refresh")
+        
+        user = User.objects.get(email=request.data['email'])
+        user = {
+            "f_name":user.f_name,
+            "l_name":user.l_name,
+            "id":user.id,
+            "email":user.email,
+            "picture":user.picture,
+            "limit":user.limit
+        }
 
+        response.data['user'] = user
         response.set_cookie(
             key="access_token", 
             value=access,
             httponly=True,  
-            secure=True,   # set true in production 
+            secure=True, 
             samesite="None",
             max_age=15 * 60
         )
@@ -22,11 +32,10 @@ class CookieTokenObtainPairView(TokenObtainPairView):
             key="refresh_token",
             value=refresh,
             httponly=True,
-            secure=True,   #set true in production
+            secure=True,
             samesite="None",
             max_age=7 * 24 * 60 * 60
         )
-        response.data["message"] = "success"
 
         return response
 

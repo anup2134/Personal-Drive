@@ -6,6 +6,7 @@ from rest_framework.exceptions import AuthenticationFailed,NotFound
 from rest_framework.decorators import api_view,authentication_classes
 
 from django.conf import settings
+from django.db.utils import IntegrityError
 
 from users.auth_class import AccessTokenAuthentication
 from ..models import File
@@ -56,17 +57,19 @@ class FileUploadView(APIView):
             raise NotFound("Folder not found.")
 
         file_size = uploaded_file.size / (1024 * 1024)
-        file = File.objects.create(
-            name=uploaded_file.name,url="https://www.dummyurl.com",obj_type=uploaded_file.content_type,user=user,folder=folder
-        )
+        try:
+            file = File.objects.create(
+                name=uploaded_file.name,url="https://www.dummyurl.com",obj_type=uploaded_file.content_type,user=user,folder=folder
+            )
+        except IntegrityError as e:
+            return Response({'message':"duplicate file name"},status = status.HTTP_409_CONFLICT)
         file_id = file.id
 
         user.limit = user.limit + file_size
 
         ALLOWED_TYPES = {
             "application/pdf",  # PDF files
-            "application/msword",  # DOC (old Word format)
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # DOCX (new Word format)
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # DOCX
             "text/plain",  # Plain text files
         }
         
@@ -143,7 +146,7 @@ def get_folders(request):
     user = request.user
     folders = user.folders.all()
     folder_names = [folder.name for folder in folders]
-
+    
     response = Response(folder_names)
     response.set_cookie(
         key="access_token",

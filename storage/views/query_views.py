@@ -5,9 +5,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone
-# from langchain_ollama import OllamaEmbeddings
+from langchain_pinecone import PineconeVectorStore
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from users.auth_class import AccessTokenAuthentication
@@ -35,7 +35,10 @@ class QueryDocView(APIView):
         
         pc = Pinecone(settings.PINECONE_API_KEY)
         index = pc.Index('personal-drive')
-        embeddings = OllamaEmbeddings(model="mxbai-embed-large")
+        embeddings = HuggingFaceInferenceAPIEmbeddings(
+            api_key=settings.HF_TOKEN,
+            model_name="sentence-transformers/all-mpnet-base-v2"
+        )
         vector_store = PineconeVectorStore(embedding=embeddings, index=index,namespace=file_id)
 
         results = vector_store.similarity_search(
@@ -56,8 +59,8 @@ class QueryDocView(APIView):
             timeout=None,
             max_retries=2,
         )
-        response = llm.invoke(f"""You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. 
-                              If you don't know the answer, just say "Unable to answer the question due to lack of relevant information.". Keep the answer concise\n
+        response = llm.invoke(f"""You are an assistant for a website called PersonalDrive, handling question-and-answer tasks. Use the following pieces of retrieved context to answer the question. 
+                              If you don't can't answer the question based on provided context, just say "Unable to answer the question due to lack of relevant information.". Keep the answer concise\n
                    <context>{context}</context>
                    <question>{query}</question>""")
 

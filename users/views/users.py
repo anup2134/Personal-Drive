@@ -140,4 +140,25 @@ def get_user(request):
     )
 
     return response
-    
+
+@api_view(["POST"])
+@authentication_classes([AccessTokenAuthentication])
+def logout(request):
+    response = Response({"message":"user logged out successfully"},status=status.HTTP_204_NO_CONTENT)
+    response.set_cookie(
+        key='access_token',
+        value='',
+        httponly=True,
+        secure=True,
+        samesite="None",
+        max_age=0
+    )
+    response.set_cookie(
+        key='refresh_token',
+        value='',
+        httponly=True,
+        secure=True,
+        samesite="None",
+        max_age=0
+    )
+    return response

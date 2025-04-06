@@ -19,7 +19,7 @@ from storage.views.file_views import FileUploadView,get_folders
 from storage.views.query_views import QueryDocView
 from users.views.users import router,google_user_signup,get_user
 from users.views.verify_email import verify_email
-from users.views.users import (destroy,get_verified_users,get_users_id)
+from users.views.users import (destroy,get_verified_users,get_users_id,logout)
 from users.views.token_views import CookieTokenObtainPairView,CookieTokenRefreshView
 
 
@@ -35,5 +35,6 @@ urlpatterns = [
     path('api/v1/user/list/verified/',get_verified_users,name="verified-list"),
     path('api/v1/user/list/users/',get_users_id,name="id-list"),
     path('api/v1/user/google/auth/',google_user_signup,name="google-auth"),
-    path('api/v1/user/get_user/',get_user,name="get-user")
+    path('api/v1/user/get_user/',get_user,name="get-user"),
+    path('api/v1/user/logout/',logout,name="logout")
 ]

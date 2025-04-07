@@ -25,7 +25,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # email
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"  # For Gmail
+EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
@@ -44,7 +44,7 @@ SIMPLE_JWT = {
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("JWT_SECRET_KEY") if os.getenv("JWT_SECRET_KEY") else r'django-insecure-@#t!cfd-=xd4mn76#%43@pmh-74p)2!jdj1d#wgz#m41%u0@&y'
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 # JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -60,11 +60,11 @@ AWS_S3_REGION_NAME =  os.getenv("AWS_S3_REGION_NAME")
 AWS_S3_CUSTOM_DOMAIN = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
 
 # cors
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS").split(',')
 CORS_ALLOW_CREDENTIALS = True 
 
 # celery and redis
-CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_BROKER_URL = os.getenv("REDIS_URL")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
@@ -134,11 +134,11 @@ WSGI_APPLICATION = 'PersonalDrive.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'drive_db',
-        'USER':'anup',
-        'PASSWORD':'asdfasdf',
-        'HOST':'localhost',
-        'PORT':'5432'
+        'NAME': os.getenv("DB_NAME"),
+        'USER':os.getenv("DB_USER"),
+        'PASSWORD':os.getenv("DB_PASSWORD"),
+        'HOST':os.getenv("DB_HOST"),
+        'PORT':os.getenv('DB_PORT')
     }
 }
 

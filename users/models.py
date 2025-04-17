@@ -44,7 +44,7 @@ class User(AbstractBaseUser):
     REQUIRED_FIELDS = ['f_name']
 
 class Group(models.Model):
-    owner = models.ForeignKey(User,null=False,on_delete=models.CASCADE)
+    owner = models.ForeignKey(User,null=False,on_delete=models.CASCADE,related_name="group_owner")
     name = models.CharField(max_length=20,blank=False,null=False)
     admins = models.ManyToManyField(User, blank=True, related_name="group_admin")
     users = models.ManyToManyField(User, blank=True, related_name="group_users")

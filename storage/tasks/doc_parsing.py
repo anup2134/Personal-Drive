@@ -15,9 +15,7 @@ from ..models import File
 @shared_task
 def process_text(path, file_id,content_type):
     try:
-        file = File.objects.get(pk=file_id)
-        # file.url = upload_to_s3(file_id,path,content_type)
-        # file.save()
+        # upload_to_s3(file_id,path,content_type)
         
         docs = parse_file(path,content_type)
         text_splitter = RecursiveCharacterTextSplitter(

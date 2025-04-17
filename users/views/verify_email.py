@@ -17,7 +17,6 @@ def get_tokens_for_user(user):
 def verify_email(request,token):
     try:
         token_obj = EmailVerificationToken.objects.get(token=token)
-
         if token_obj.expires_at < timezone.now():
             return Response({"message":"link expired"},status=status.HTTP_400_BAD_REQUEST)
         
@@ -29,7 +28,7 @@ def verify_email(request,token):
         tokens = get_tokens_for_user(user)
         response = Response({"message":"email verified successfully"},status=status.HTTP_200_OK)
         
-        Folder.objects.create(name="root",user=user)
+        Folder.objects.create(name="root",owner=user)
 
         response.set_cookie(
             key="access_token",
@@ -52,5 +51,6 @@ def verify_email(request,token):
         return response
     except EmailVerificationToken.DoesNotExist:
         return Response({"message":"invalid token"},status=status.HTTP_404_NOT_FOUND)
-    except:
+    except Exception as e:
+        print(e)
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -26,6 +26,6 @@ def upload_to_s3(file_id,file,content_type):
             ExtraArgs={"ContentType": content_type if content_type else "application/octet-stream"}
         )
 
-    file_url = f"{settings.AWS_S3_CUSTOM_DOMAIN}/{s3_key}"
-    return file_url
+    # file_url = f"{settings.AWS_S3_CUSTOM_DOMAIN}/{s3_key}"
+    # return file_url
 

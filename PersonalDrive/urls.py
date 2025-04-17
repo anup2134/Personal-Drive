@@ -21,10 +21,13 @@ from users.views.users import router,google_user_signup,get_user
 from users.views.verify_email import verify_email
 from users.views.users import (destroy,get_verified_users,get_users_id,logout)
 from users.views.token_views import CookieTokenObtainPairView,CookieTokenRefreshView
+from users.views.group_view import create_group
+from storage.views.group_file_views import upload_file_to_group
 
 
 urlpatterns = [
     path('api/v1/storage/file/upload/', FileUploadView.as_view(), name='file-upload'),
+    path('api/v1/storage/file/group/upload/', upload_file_to_group, name='group-file-upload'),
     path('api/v1/storage/folders/', get_folders, name='folders'),
     path('api/v1/storage/file/query/', QueryDocView.as_view(), name='file-query'),
     path('',include(router.urls)),
@@ -36,5 +39,6 @@ urlpatterns = [
     path('api/v1/user/list/users/',get_users_id,name="id-list"),
     path('api/v1/user/google/auth/',google_user_signup,name="google-auth"),
     path('api/v1/user/get_user/',get_user,name="get-user"),
-    path('api/v1/user/logout/',logout,name="logout")
+    path('api/v1/user/logout/',logout,name="logout"),
+    path('api/v1/user/create/group/',create_group,name="create-group")
 ]

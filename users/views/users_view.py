@@ -88,16 +88,29 @@ def google_user_signup(request):
     }
     serializer = GoogleUserSerializer(data=data)
     if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    user = serializer.save()
+        try:
+            user = User.objects.get(email=data['email'])
+        except:
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    else:
+        user = serializer.save()
+
     tokens = get_tokens_for_user(user)
-    response = Response({"message":"google auth successful"},status=status.HTTP_200_OK)
+    user = {
+        "f_name":user.f_name,
+        "l_name":user.l_name,
+        "id":user.id,
+        "email":user.email,
+        "picture":user.picture,
+        "limit":user.limit
+    }
+
+    response = Response({"user":user},status=status.HTTP_200_OK)
     response.set_cookie(
         key="access_token",
         value=tokens['access'],
         httponly=True,  
-        secure=True,   # set true in production 
+        secure=True,
         samesite="None",
         max_age=15 * 60
     )
@@ -106,7 +119,7 @@ def google_user_signup(request):
         key="refresh_token",
         value=tokens['refresh'],
         httponly=True,
-        secure=True,   #set true in production
+        secure=True,  
         samesite="None",
         max_age=7 * 24 * 60 * 60
     )
@@ -119,14 +132,15 @@ def google_user_signup(request):
 def get_user(request):
     if not request.user:
         return Response({"message":"not user found"},status=status.HTTP_204_NO_CONTENT)
-    user  = request.user
+    user = request.user
     user = {
         "f_name":user.f_name,
         "l_name":user.l_name,
         "id":user.id,
         "email":user.email,
         "picture":user.picture,
-        "limit":user.limit
+        "limit":user.limit,
+        "root_folder_id":user.folders.get(name="root").id
     }
 
     response = Response({"user":user})

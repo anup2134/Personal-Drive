@@ -16,6 +16,7 @@ class UserManager(BaseUserManager):
             user.set_password(password)
         elif not password and auth_type == 'google':
             user.set_unusable_password()
+            user.is_active = True
         else:
             raise ValueError("password error")
         user.save(using=self._db)
@@ -34,7 +35,7 @@ class User(AbstractBaseUser):
     f_name = models.CharField(max_length=20,blank=False,null=False)
     l_name = models.CharField(max_length=20,blank=True)
     auth_type = models.CharField(max_length=10, choices=AUTH_CHOICES,default=LOCAL)
-    password = models.CharField(max_length=128, blank=True, null=True)  # Only for local users
+    password = models.CharField(max_length=128, blank=True, null=True)
     picture = models.URLField(blank=True,null=True)
     is_active = models.BooleanField(default=False)
     limit = models.FloatField(default=0.0)

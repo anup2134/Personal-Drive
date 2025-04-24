@@ -6,11 +6,11 @@ from django.utils import timezone
 
 
 class Folder(models.Model):
-    name = models.CharField(max_length=50,blank=False,null=False)
+    name = models.TextField(blank=False,null=False)
     owner = models.ForeignKey(User, blank=True, null=True, related_name="folders",on_delete=models.CASCADE)
-    shared = models.ManyToManyField(User, related_name="shared_folders", blank=True)
     group = models.ForeignKey(Group, blank=True,null=True, related_name="folders",on_delete=models.CASCADE)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
+    created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         constraints = [
@@ -19,8 +19,6 @@ class Folder(models.Model):
         ]
 
     def clean(self):
-        if self.owner and self.group:
-            raise ValidationError("Only one of user_owner or group_owner should be set.")
         if not self.owner and not self.group:
             raise ValidationError("One of user_owner or group_owner must be set.")
 
@@ -38,12 +36,13 @@ class File(models.Model):
 
     created_at = models.DateTimeField(default=timezone.now)
     obj_type = models.CharField(blank=False,null=False)
-    name = models.CharField(max_length = 50,blank=False,null=False)
+    name = models.TextField(blank=False,null=False)
     access = models.CharField(max_length=7,choices=ACCESS_CHOICE,default=ACCESS_CHOICE[1][0])
     owner = models.ForeignKey(User, blank=True, null=True, related_name="files",on_delete=models.CASCADE)
     shared = models.ManyToManyField(User, related_name="shared_files", blank=True)
     group = models.ForeignKey(Group, blank=True,null=True, related_name="files",on_delete=models.CASCADE)
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='files', null=True,blank=True)
+    size = models.FloatField(blank=False,null=False,default=0.0)
 
     class Meta:
         constraints = [
@@ -52,8 +51,6 @@ class File(models.Model):
         ]
 
     def clean(self):
-        if self.owner and self.group:
-            raise ValidationError("Only one of user or group should be set.")
         if not self.owner and not self.group:
             raise ValidationError("One of user or group must be set.")
         if not self.folder:

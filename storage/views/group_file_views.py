@@ -65,11 +65,11 @@ def upload_file_to_group(request):
         "text/plain",  # Plain text files
     }
         
-    if uploaded_file.content_type in TEXT_TYPES:
-        path = save_uploaded_file_temporarily(uploaded_file,file_id)
-        process_text.delay(path,file_id,uploaded_file.content_type)
-    else:
-        upload_to_s3(file_id,uploaded_file,uploaded_file.content_type)
+    # if uploaded_file.content_type in TEXT_TYPES:
+    #     path = save_uploaded_file_temporarily(uploaded_file,file_id)
+    #     process_text.delay(path,file_id,uploaded_file.content_type)
+    # else:
+    #     upload_to_s3(file_id,uploaded_file,uploaded_file.content_type)
 
     response = Response({'file_size': file_size,'file type':uploaded_file.content_type}, status=status.HTTP_201_CREATED)
     response.set_cookie(

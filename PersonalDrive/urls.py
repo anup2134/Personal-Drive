@@ -15,20 +15,19 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path,include
-from storage.views.file_views import FileUploadView,get_folders
+from storage.views.file_views import FileUploadView,get_root_folder,create_folder,get_all
 from storage.views.query_views import QueryDocView
-from users.views.users import router,google_user_signup,get_user
+from users.views.users_view import router,google_user_signup,get_user
 from users.views.verify_email import verify_email
-from users.views.users import (destroy,get_verified_users,get_users_id,logout)
+from users.views.users_view import (destroy,get_verified_users,get_users_id,logout)
 from users.views.token_views import CookieTokenObtainPairView,CookieTokenRefreshView
 from users.views.group_view import create_group
 from storage.views.group_file_views import upload_file_to_group
 
-
 urlpatterns = [
     path('api/v1/storage/file/upload/', FileUploadView.as_view(), name='file-upload'),
-    path('api/v1/storage/file/group/upload/', upload_file_to_group, name='group-file-upload'),
-    path('api/v1/storage/folders/', get_folders, name='folders'),
+    path('api/v1/storage/file/upload/group/', upload_file_to_group, name='group-file-upload'),
+    path('api/v1/storage/my_files/', get_root_folder, name='root-folders'),
     path('api/v1/storage/file/query/', QueryDocView.as_view(), name='file-query'),
     path('',include(router.urls)),
     path('api/v1/user/verify_email/<str:token>/',verify_email,name="verify-email"),
@@ -40,5 +39,7 @@ urlpatterns = [
     path('api/v1/user/google/auth/',google_user_signup,name="google-auth"),
     path('api/v1/user/get_user/',get_user,name="get-user"),
     path('api/v1/user/logout/',logout,name="logout"),
-    path('api/v1/user/create/group/',create_group,name="create-group")
+    path('api/v1/user/create/group/',create_group,name="create-group"),
+    path('api/v1/storage/folder/create/',create_folder,name="create-folder"),
+    path('api/v1/get_all/',get_all,name="get-all"),
 ]

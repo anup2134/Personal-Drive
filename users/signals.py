@@ -6,7 +6,11 @@ from storage.models import Folder
 
 @receiver(post_save, sender=User)
 def create_verification_token(sender, instance, created, **kwargs):
-    if instance.auth_type == User.GOOGLE:
+    if instance.auth_type == User.GOOGLE and created:
+        Folder.objects.create(
+            name="root",
+            owner=instance
+        )
         return
     if created:
         send_email.delay(instance.id)

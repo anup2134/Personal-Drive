@@ -4,6 +4,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from ..models import Group
 # from storage.models import Folder
+# from storage.models import Folder
 from rest_framework import status
 
 @api_view(["POST","GET","DELETE"])
@@ -13,6 +14,8 @@ def create_group(request:Request):
         request.user.group_owner.all().delete()
 
         return Response("DELETED",status=status.HTTP_205_RESET_CONTENT)
+    
+
     if request.method == "GET":
         user = request.user
         owned_groups = user.group_owner.all()
@@ -33,10 +36,12 @@ def create_group(request:Request):
             max_age=15 * 60
         )
         return response
+
     group_name = request.data.get('name')
+    user = request.user
+    
     if not group_name:
         return Response({"message":"group name is required"},status=status.HTTP_400_BAD_REQUEST)
-    user = request.user
     Group.objects.create(
         owner=user,
         name=group_name

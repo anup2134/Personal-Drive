@@ -8,7 +8,7 @@ from langchain_pinecone import PineconeVectorStore
 from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 
 
-from utils.upload_to_s3 import upload_to_s3
+from utils.s3_utils import upload_to_s3
 from utils.file_parser import parse_file
 from ..models import File
 

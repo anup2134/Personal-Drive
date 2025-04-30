@@ -15,19 +15,19 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path,include
-from storage.views.file_views import FileUploadView,get_root_folder,create_folder,get_all
+from storage.views.file_views import FileUploadView,get_folder_content,create_folder,get_all,get_shared_files,get_photos
 from storage.views.query_views import QueryDocView
 from users.views.users_view import router,google_user_signup,get_user
 from users.views.verify_email import verify_email
 from users.views.users_view import (destroy,get_verified_users,get_users_id,logout)
 from users.views.token_views import CookieTokenObtainPairView,CookieTokenRefreshView
-from users.views.group_view import create_group
+from users.views.group_view import create_group,get_groups
 from storage.views.group_file_views import upload_file_to_group
 
 urlpatterns = [
     path('api/v1/storage/file/upload/', FileUploadView.as_view(), name='file-upload'),
     path('api/v1/storage/file/upload/group/', upload_file_to_group, name='group-file-upload'),
-    path('api/v1/storage/my_files/', get_root_folder, name='root-folders'),
+    path('api/v1/storage/folder_content/', get_folder_content, name='root-folders'),
     path('api/v1/storage/file/query/', QueryDocView.as_view(), name='file-query'),
     path('',include(router.urls)),
     path('api/v1/user/verify_email/<str:token>/',verify_email,name="verify-email"),
@@ -42,4 +42,7 @@ urlpatterns = [
     path('api/v1/user/create/group/',create_group,name="create-group"),
     path('api/v1/storage/folder/create/',create_folder,name="create-folder"),
     path('api/v1/get_all/',get_all,name="get-all"),
+    path('api/v1/storage/shared_files/',get_shared_files,name="shared-files"),
+    path('api/v1/storage/images/',get_photos, name='images'),
+    path('api/v1/user/groups/all/',get_groups, name='all-groups'),
 ]

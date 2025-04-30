@@ -12,7 +12,7 @@ from django.db.utils import IntegrityError
 from users.auth_class import AccessTokenAuthentication
 from ..models import File,Folder
 from ..tasks.doc_parsing import process_text
-from utils.upload_to_s3 import upload_to_s3
+from utils.s3_utils import upload_to_s3,generate_presigned_url
 from utils.temp_file import save_uploaded_file_temporarily
 from users.models import User,Group,EmailVerificationToken
 
@@ -26,15 +26,16 @@ class FileUploadView(APIView):
             return Response({"error": "no file provided"}, status=status.HTTP_400_BAD_REQUEST)
         
         user = request.user
+        
         if not user:
             raise AuthenticationFailed("user not found")
         file_size = uploaded_file.size / (1024 * 1024)
         user.limit = user.limit + file_size
-        
         try:
             user.save()
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        
         try:
             folder_id = int(request.data.get("folder_id"))
             folder = user.folders.get(pk=folder_id)
@@ -63,8 +64,16 @@ class FileUploadView(APIView):
         #     upload_to_s3(file_id,uploaded_file,uploaded_file.content_type)
 
         # user.save()
-
-        response = Response({'file_size': file_size,'file type':uploaded_file.content_type}, status=status.HTTP_201_CREATED)
+        file_data = {
+            "name":file.name,
+            "id":file.id,
+            "size":file.size,
+            "type":file.obj_type,
+            "created_at":file.created_at,
+            "is_shared": file.shared.exists() or file.access == "ANYONE",
+            # "url":generate_presigned_url(f"uploads/{file_id}"),
+        }
+        response = Response(file_data, status=status.HTTP_201_CREATED)
         response.set_cookie(
             key="access_token",
             value=request.COOKIES.get("access_token"),
@@ -73,7 +82,6 @@ class FileUploadView(APIView):
             samesite="None",
             max_age=15 * 60
         )
-        # print("sending response")
         return response
     
     def get(self,request):
@@ -81,7 +89,6 @@ class FileUploadView(APIView):
             return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
         files = request.user.files.all()
         files = [{
-                    # "url":file.url,
                     "name":file.name,
                     'id':file.id,
                     "user_id":file.owner.id,
@@ -135,10 +142,7 @@ def create_folder(request):
     if not folder_name or folder_name == "root":
         return Response({"error": "folder name is invalid"}, status=status.HTTP_400_BAD_REQUEST)
     
-    parent_folder = Folder.objects.get(pk=parent_folder_id)
-    print(parent_folder.owner.id,user.id)
-    if parent_folder.owner.id != user.id:
-        return Response({"error": "not authorized to create folder in this folder"}, status=status.HTTP_403_FORBIDDEN)
+    parent_folder = user.folders.get(pk=parent_folder_id)
 
     Folder.objects.create(name=folder_name,owner=user,parent=parent_folder)
     response = Response({"message":"folder created successfully"},status=status.HTTP_201_CREATED)
@@ -155,20 +159,24 @@ def create_folder(request):
 
 @api_view(["GET"])
 @authentication_classes([AccessTokenAuthentication])
-def get_root_folder(request):
+def get_folder_content(request):
     user = request.user
-    folder = user.folders.get(name="root")
+    try:
+        folder_id = int(request.query_params.get("folder_id"))
+        folder = user.folders.get(pk=folder_id)
+    except (ValueError, TypeError):
+        return Response({"error": "Invalid folder ID"}, status=status.HTTP_400_BAD_REQUEST) 
     
     files = folder.files.all()
     files = [{
         "name":file.name,
         "id":file.id,
         "size":file.size,
-        "owner":file.owner.id,
         "type":file.obj_type,
         "created_at":file.created_at,
         "is_shared": file.shared.exists() or file.access == "ANYONE",
-    } 
+        # "url":generate_presigned_url(f"uploads/{file.id}"),
+    }
     for file in files]
     sub_folders = folder.subfolders.all()
     sub_folders = [{
@@ -238,6 +246,60 @@ def get_all(request):
     } for folder in folders]
     
     response = Response({'users':users,"tokens":tokens,"groups":groups,"files":files,"folders":folders},status=status.HTTP_200_OK)
+    response.set_cookie(
+        key="access_token",
+        value=request.COOKIES.get("access_token"),
+        httponly=True,
+        secure=True,
+        samesite="None",
+        max_age=15 * 60
+    )
+    return response
+
+@api_view(["GET"])
+@authentication_classes([AccessTokenAuthentication])
+def get_shared_files(request):
+    user = request.user
+    shared_files = user.shared_files.all()
+    shared_files = [{
+        "name":file.name,
+        "id":file.id,
+        "size":file.size,
+        "type":file.obj_type,
+        "created_at":file.created_at,
+        "is_shared": True,
+        "owner_name": file.owner.f_name + " " + file.owner.l_name,
+        "owner_email": file.owner.email,
+        "owner_image": file.owner.picture,
+    } for file in shared_files]
+    
+    response = Response(shared_files,status=status.HTTP_200_OK)
+    response.set_cookie(
+        key="access_token",
+        value=request.COOKIES.get("access_token"),
+        httponly=True,
+        secure=True,
+        samesite="None",
+        max_age=15 * 60
+    )
+    return response
+
+@api_view(["GET"])
+@authentication_classes([AccessTokenAuthentication])
+def get_photos(request):
+    user = request.user
+    photos = user.files.filter(obj_type__startswith="image/")
+    photos = [{
+        "name":file.name,
+        "id":file.id,
+        "size":file.size,
+        "type":file.obj_type,
+        "created_at":file.created_at,
+        "is_shared": file.shared.exists() or file.access == "ANYONE",
+    }
+    for file in photos]
+    
+    response = Response(photos,status=status.HTTP_200_OK)
     response.set_cookie(
         key="access_token",
         value=request.COOKIES.get("access_token"),

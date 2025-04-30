@@ -7,7 +7,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from ..models import File
 from django.db.utils import IntegrityError
 from ..tasks.doc_parsing import process_text
-from utils.upload_to_s3 import upload_to_s3
+from utils.s3_utils import upload_to_s3
 from utils.temp_file import save_uploaded_file_temporarily
 
 

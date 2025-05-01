@@ -48,7 +48,7 @@ class FileUploadView(APIView):
             )
         except IntegrityError as e:
             return Response({'message':"duplicate file name"},status = status.HTTP_409_CONFLICT)
-        file_id = file.id
+        # file_id = file.id
 
         # file.save()
         TEXT_TYPES = {
@@ -61,9 +61,8 @@ class FileUploadView(APIView):
         #     path = save_uploaded_file_temporarily(uploaded_file,file_id)
         #     process_text.delay(path,file_id,uploaded_file.content_type)
         # else:
-        #     upload_to_s3(file_id,uploaded_file,uploaded_file.content_type)
+        # upload_to_s3(file.id,uploaded_file,uploaded_file.content_type)
 
-        # user.save()
         file_data = {
             "name":file.name,
             "id":file.id,
@@ -71,7 +70,7 @@ class FileUploadView(APIView):
             "type":file.obj_type,
             "created_at":file.created_at,
             "is_shared": file.shared.exists() or file.access == "ANYONE",
-            # "url":generate_presigned_url(f"uploads/{file_id}"),
+            # "url":generate_presigned_url(f"uploads/{file.id}"),
         }
         response = Response(file_data, status=status.HTTP_201_CREATED)
         response.set_cookie(
@@ -108,16 +107,17 @@ class FileUploadView(APIView):
         return response
 
     def delete(self,request):
-        if not settings.DEBUG:
-            return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
-
-        file_id = int(request.query_params.get("file_id"))
-        file = request.user.files.get(pk=file_id)
+        try:
+            file_id = int(request.query_params.get("file_id"))
+            file = request.user.files.get(pk=file_id)
+        except:
+            return Response({"error": "file not found"}, status=status.HTTP_404_NOT_FOUND)
+        
         file_size = file.size
         file.delete()
         request.user.limit -= file_size
         request.user.save()
-        response = Response({"message":"file deleted successfully"},status=status.HTTP_204_NO_CONTENT)
+        response = Response("File deleted successfully.",status=status.HTTP_204_NO_CONTENT)
         response.set_cookie(
             key="access_token",
             value=request.COOKIES.get("access_token"),
@@ -176,6 +176,7 @@ def get_folder_content(request):
         "created_at":file.created_at,
         "is_shared": file.shared.exists() or file.access == "ANYONE",
         # "url":generate_presigned_url(f"uploads/{file.id}"),
+        "url":"dummyurl"
     }
     for file in files]
     sub_folders = folder.subfolders.all()
@@ -210,7 +211,8 @@ def get_all(request):
         'id':file.id,
         "user_id":file.owner.id,
         "group_id": "no group" if not file.group else file.group.id,
-        "folder_id":file.folder.id
+        "folder_id":file.folder.id,
+        "access":file.access
     } for file in files]
 
     users = User.objects.all()
@@ -296,6 +298,7 @@ def get_photos(request):
         "type":file.obj_type,
         "created_at":file.created_at,
         "is_shared": file.shared.exists() or file.access == "ANYONE",
+        "url":"dummyurl"
     }
     for file in photos]
     
@@ -309,3 +312,42 @@ def get_photos(request):
         max_age=15 * 60
     )
     return response
+
+@api_view(["PUT"])
+@authentication_classes([AccessTokenAuthentication])
+def file_share(request):
+    user = request.user
+    try:
+        file_id = request.data.get("file_id")
+        file = user.files.get(pk=file_id)
+    except File.DoesNotExist:
+        return Response({"error":"File not found."},status=status.HTTP_400_BAD_REQUEST)
+    except:
+        return Response({"error":"Invalid file ID."},status=status.HTTP_400_BAD_REQUEST)
+    anyone = request.data.get("anyone")
+    email = request.data.get("email")
+    response = Response(status=status.HTTP_204_NO_CONTENT)
+    response.set_cookie(
+        key="access_token",
+        value=request.COOKIES.get("access_token"),
+        httponly=True,
+        secure=True,
+        samesite="None",
+        max_age=15 * 60
+    )
+    if anyone:
+        file.access = 'ANYONE'
+        file.save()
+        print("here1")
+        return response
+    elif email != "":
+        try:
+            user2 = User.objects.find(email=email)
+            file.shared.add(user2)
+            file.save()
+            print("here2")
+            return response
+        except:
+            return Response({"error":"Invalid Email ID."},status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({"error":"Invalid request"},status=status.HTTP_400_BAD_REQUEST)

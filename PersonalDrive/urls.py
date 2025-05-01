@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path,include
-from storage.views.file_views import FileUploadView,get_folder_content,create_folder,get_all,get_shared_files,get_photos
+from storage.views.file_views import FileUploadView,get_folder_content,create_folder,get_all,get_shared_files,get_photos,file_share
 from storage.views.query_views import QueryDocView
 from users.views.users_view import router,google_user_signup,get_user
 from users.views.verify_email import verify_email
@@ -45,4 +45,5 @@ urlpatterns = [
     path('api/v1/storage/shared_files/',get_shared_files,name="shared-files"),
     path('api/v1/storage/images/',get_photos, name='images'),
     path('api/v1/user/groups/all/',get_groups, name='all-groups'),
+    path('api/v1/storage/file/update/share/',file_share, name='file-share'),
 ]

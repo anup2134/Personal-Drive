@@ -43,3 +43,22 @@ def generate_presigned_url(object_key:str) -> str:
         return url
     except:
         return None
+    
+def delete_from_s3(object_key:str) -> bool:
+    try:
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME
+        )
+        s3_client.delete_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Key=object_key
+        )
+        return 
+    except NoCredentialsError:
+        return
+    except Exception as e:
+        # print(f"Error deleting file from S3: {e}")
+        return 

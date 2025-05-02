@@ -48,9 +48,7 @@ class FileUploadView(APIView):
             )
         except IntegrityError as e:
             return Response({'message':"duplicate file name"},status = status.HTTP_409_CONFLICT)
-        # file_id = file.id
 
-        # file.save()
         TEXT_TYPES = {
             "application/pdf",  # PDF files
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # DOCX
@@ -58,10 +56,14 @@ class FileUploadView(APIView):
         }
         
         # if uploaded_file.content_type in TEXT_TYPES:
-        #     path = save_uploaded_file_temporarily(uploaded_file,file_id)
-        #     process_text.delay(path,file_id,uploaded_file.content_type)
+        #     path = save_uploaded_file_temporarily(uploaded_file,file.id)
+        #     process_text.delay(path,file.id,uploaded_file.content_type)
+        #     upload_to_s3(file.id,path,uploaded_file.content_type)
         # else:
-        # upload_to_s3(file.id,uploaded_file,uploaded_file.content_type)
+        #     upload_to_s3(file.id,uploaded_file,uploaded_file.content_type)
+
+        # path = save_uploaded_file_temporarily(uploaded_file,file.id)
+        # process_text.delay(path,file.id,uploaded_file.content_type)
 
         file_data = {
             "name":file.name,
@@ -71,6 +73,7 @@ class FileUploadView(APIView):
             "created_at":file.created_at,
             "is_shared": file.shared.exists() or file.access == "ANYONE",
             # "url":generate_presigned_url(f"uploads/{file.id}"),
+            # 'url':"dummyurl"
         }
         response = Response(file_data, status=status.HTTP_201_CREATED)
         response.set_cookie(
@@ -134,7 +137,7 @@ class FileUploadView(APIView):
 def create_folder(request):
     user = request.user
     try:
-        parent_folder_id = int(request.data.get("parent_folder_id"))
+        parent_folder_id = request.data.get("parent_folder_id")
     except (ValueError, TypeError):
         return Response({"error": "Invalid parent folder ID"}, status=status.HTTP_400_BAD_REQUEST)
     
@@ -144,8 +147,15 @@ def create_folder(request):
     
     parent_folder = user.folders.get(pk=parent_folder_id)
 
-    Folder.objects.create(name=folder_name,owner=user,parent=parent_folder)
-    response = Response({"message":"folder created successfully"},status=status.HTTP_201_CREATED)
+    folder = Folder.objects.create(name=folder_name,owner=user,parent=parent_folder)
+    response = Response({
+        "folder": {
+            "id": folder.id,
+            "name": folder.name,
+            "created_at": folder.created_at,
+            "owner": folder.owner.id,
+        }
+    }, status=status.HTTP_201_CREATED)
     response.set_cookie(
         key="access_token",
         value=request.COOKIES.get("access_token"),
@@ -176,7 +186,7 @@ def get_folder_content(request):
         "created_at":file.created_at,
         "is_shared": file.shared.exists() or file.access == "ANYONE",
         # "url":generate_presigned_url(f"uploads/{file.id}"),
-        "url":"dummyurl"
+        # "url":"dummyurl"
     }
     for file in files]
     sub_folders = folder.subfolders.all()

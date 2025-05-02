@@ -34,12 +34,12 @@ class QueryDocView(APIView):
             raise ValueError("Pinecone api key not found")
         
         pc = Pinecone(settings.PINECONE_API_KEY)
-        index = pc.Index('personal-drive')
+        index = pc.Index('personal-drive-hf')
         embeddings = HuggingFaceInferenceAPIEmbeddings(
             api_key=settings.HF_TOKEN,
             model_name="sentence-transformers/all-mpnet-base-v2"
         )
-        vector_store = PineconeVectorStore(embedding=embeddings, index=index,namespace=file_id)
+        vector_store = PineconeVectorStore(embedding=embeddings, index=index, namespace=file_id)
 
         results = vector_store.similarity_search(
             query=query,
@@ -64,5 +64,5 @@ class QueryDocView(APIView):
                    <context>{context}</context>
                    <question>{query}</question>""")
 
-        return Response({"success":"true","response":response.content},status.HTTP_200_OK)
+        return Response({"response":response.content},status.HTTP_200_OK)
     

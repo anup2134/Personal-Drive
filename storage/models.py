@@ -3,6 +3,7 @@ from users.models import User
 from users.models import Group
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from utils.s3_utils import generate_presigned_url
 
 
 class Folder(models.Model):
@@ -43,6 +44,15 @@ class File(models.Model):
     group = models.ForeignKey(Group, blank=True,null=True, related_name="files",on_delete=models.CASCADE)
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='files', null=True,blank=True)
     size = models.FloatField(blank=False,null=False,default=0.0)
+
+    @property
+    def is_shared(self):
+        return self.shared.exists() or self.access == "ANYONE"
+    
+    @property
+    def url(self):
+        return "dummyurl"
+        # return generate_presigned_url(f"uploads/{self.id}")
 
     class Meta:
         constraints = [

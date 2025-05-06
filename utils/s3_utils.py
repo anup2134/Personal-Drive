@@ -38,7 +38,7 @@ def generate_presigned_url(object_key:str) -> str:
         url = s3_client.generate_presigned_url(
             ClientMethod="get_object",
             Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': object_key},
-            ExpiresIn=3600
+            ExpiresIn=7200
         )
         return url
     except Exception as e:

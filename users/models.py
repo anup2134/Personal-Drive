@@ -39,8 +39,11 @@ class User(AbstractBaseUser):
     picture = models.URLField(blank=True,null=True)
     is_active = models.BooleanField(default=False)
     limit = models.FloatField(default=0.0)
-    objects = UserManager()
+    @property
+    def full_name(self):
+        return self.f_name +  ((" " + self.l_name) if self.l_name != "" else "")
 
+    objects = UserManager()
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ['f_name']
 

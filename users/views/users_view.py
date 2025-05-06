@@ -47,9 +47,9 @@ def destroy(request):
     if not settings.DEBUG:  
         return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
     # print(email)
-
-    User.objects.all().delete()
-    return Response({"message":"all users deleted successfully"},status=status.HTTP_204_NO_CONTENT)
+    email = request.query_params.get("email")
+    User.objects.get(email=email).delete()
+    return Response({"message":"user deleted successfully"},status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(["GET"])

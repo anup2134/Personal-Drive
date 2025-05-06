@@ -15,22 +15,24 @@ from ..tasks.doc_parsing import process_text
 from utils.s3_utils import upload_to_s3,generate_presigned_url
 from utils.temp_file import save_uploaded_file_temporarily
 from users.models import User,Group,EmailVerificationToken
+from ..serializers import FileSerializer, FolderSerializer, SharedFileSerializer
+
+#NW426uLB2zxi9F3
 
 class FileUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
     authentication_classes = [AccessTokenAuthentication]
     def post(self, request:Request):
         uploaded_file = request.FILES.get('file')
-
         if not uploaded_file:
             return Response({"error": "no file provided"}, status=status.HTTP_400_BAD_REQUEST)
         
         user = request.user
-        
         if not user:
             raise AuthenticationFailed("user not found")
         file_size = uploaded_file.size / (1024 * 1024)
         user.limit = user.limit + file_size
+
         try:
             user.save()
         except Exception as e:
@@ -65,40 +67,8 @@ class FileUploadView(APIView):
         # path = save_uploaded_file_temporarily(uploaded_file,file.id)
         # process_text.delay(path,file.id,uploaded_file.content_type)
 
-        file_data = {
-            "name":file.name,
-            "id":file.id,
-            "size":file.size,
-            "type":file.obj_type,
-            "created_at":file.created_at,
-            "is_shared": file.shared.exists() or file.access == "ANYONE",
-            # "url":generate_presigned_url(f"uploads/{file.id}"),
-            # 'url':"dummyurl"
-        }
+        file_data = FileSerializer(file).data
         response = Response(file_data, status=status.HTTP_201_CREATED)
-        response.set_cookie(
-            key="access_token",
-            value=request.COOKIES.get("access_token"),
-            httponly=True,
-            secure=True,
-            samesite="None",
-            max_age=15 * 60
-        )
-        return response
-    
-    def get(self,request):
-        if not settings.DEBUG:  
-            return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
-        files = request.user.files.all()
-        files = [{
-                    "name":file.name,
-                    'id':file.id,
-                    "user_id":file.owner.id,
-                    "group_id": "no group" if not file.group else file.group.id,
-                    "folder_id":file.folder.id
-                } for file in files]
-        
-        response = Response({'all documents':files},status=status.HTTP_200_OK)
         response.set_cookie(
             key="access_token",
             value=request.COOKIES.get("access_token"),
@@ -130,7 +100,6 @@ class FileUploadView(APIView):
             max_age=15 * 60
         )
         return response
-    
 
 @api_view(["POST"])
 @authentication_classes([AccessTokenAuthentication]) 
@@ -148,13 +117,10 @@ def create_folder(request):
     parent_folder = user.folders.get(pk=parent_folder_id)
 
     folder = Folder.objects.create(name=folder_name,owner=user,parent=parent_folder)
+    serialize = FolderSerializer(folder)
+
     response = Response({
-        "folder": {
-            "id": folder.id,
-            "name": folder.name,
-            "created_at": folder.created_at,
-            "owner": folder.owner.id,
-        }
+        "folder": serialize.data
     }, status=status.HTTP_201_CREATED)
     response.set_cookie(
         key="access_token",
@@ -178,25 +144,9 @@ def get_folder_content(request):
         return Response({"error": "Invalid folder ID"}, status=status.HTTP_400_BAD_REQUEST) 
     
     files = folder.files.all()
-    files = [{
-        "name":file.name,
-        "id":file.id,
-        "size":file.size,
-        "type":file.obj_type,
-        "created_at":file.created_at,
-        "is_shared": file.shared.exists() or file.access == "ANYONE",
-        # "url":generate_presigned_url(f"uploads/{file.id}"),
-        # "url":"dummyurl"
-    }
-    for file in files]
+    files = FileSerializer(files, many=True).data
     sub_folders = folder.subfolders.all()
-    sub_folders = [{
-        "id": folder.id,
-        "name": folder.name,
-        "created_at": folder.created_at,
-        "owner": folder.owner.id,
-    } 
-    for folder in sub_folders] 
+    sub_folders = FolderSerializer(sub_folders, many=True).data
 
     response = Response({"files":files,"sub_folders":sub_folders})
     response.set_cookie(
@@ -209,6 +159,108 @@ def get_folder_content(request):
     )
 
     return response
+
+
+@api_view(["GET"])
+@authentication_classes([AccessTokenAuthentication])
+def get_shared_files(request):
+    user = request.user
+    shared_files = user.shared_files.all()
+    file_serializer_data = SharedFileSerializer(shared_files,many=True).data
+    
+    response = Response(file_serializer_data,status=status.HTTP_200_OK)
+    response.set_cookie(
+        key="access_token",
+        value=request.COOKIES.get("access_token"),
+        httponly=True,
+        secure=True,
+        samesite="None",
+        max_age=15 * 60
+    )
+    return response
+
+@api_view(["GET"])
+@authentication_classes([AccessTokenAuthentication])
+def get_photos(request):
+    user = request.user
+    photos = user.files.filter(obj_type__startswith="image/")
+    photos = FileSerializer(photos,many=True).data
+    
+    response = Response(photos,status=status.HTTP_200_OK)
+    response.set_cookie(
+        key="access_token",
+        value=request.COOKIES.get("access_token"),
+        httponly=True,
+        secure=True,
+        samesite="None",
+        max_age=15 * 60
+    )
+    return response
+
+@api_view(["PUT"])
+@authentication_classes([AccessTokenAuthentication])
+def file_share(request):
+    user = request.user
+    try:
+        file_id = request.data.get("file_id")
+        file = user.files.get(pk=file_id)
+    except File.DoesNotExist:
+        return Response({"error":"File not found."},status=status.HTTP_400_BAD_REQUEST)
+    except:
+        return Response({"error":"Invalid file ID."},status=status.HTTP_400_BAD_REQUEST)
+    anyone = request.data.get("anyone")
+    email = request.data.get("email")
+    response = Response(status=status.HTTP_204_NO_CONTENT)
+    response.set_cookie(
+        key="access_token",
+        value=request.COOKIES.get("access_token"),
+        httponly=True,
+        secure=True,
+        samesite="None",
+        max_age=15 * 60
+    )
+    if anyone:
+        file.access = 'ANYONE'
+        file.save()
+        return response
+    elif email != "":
+        try:
+            user2 = User.objects.get(email=email)
+            file.shared.add(user2)
+            file.save()
+            return response
+        except:
+            return Response({"error":"Invalid Email ID."},status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({"error":"Invalid request"},status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(["GET"])
+@authentication_classes([AccessTokenAuthentication])
+def search_files_folders(request):
+    user = request.user
+    name = request.query_params.get("name")
+
+    try:
+        files = user.files.filter(name__startswith=name)
+        folders = user.folders.filter(name__startswith=name)
+
+        files = FileSerializer(files,many=True)
+        folders = FolderSerializer(folders,many=True)
+
+        response = Response({"files":files,"folders":folders},status=status.HTTP_200_OK)
+        response.set_cookie(
+            key="access_token",
+            value=request.COOKIES.get("access_token"),
+            httponly=True,
+            secure=True,
+            samesite="None",
+            max_age=15 * 60
+        )
+        return response
+    except:
+        return Response({"error":"Invalid request"},status=status.HTTP_400_BAD_REQUEST)
+    
 
 @api_view(["GET"])
 def get_all(request):
@@ -267,97 +319,3 @@ def get_all(request):
         max_age=15 * 60
     )
     return response
-
-@api_view(["GET"])
-@authentication_classes([AccessTokenAuthentication])
-def get_shared_files(request):
-    user = request.user
-    shared_files = user.shared_files.all()
-    shared_files = [{
-        "name":file.name,
-        "id":file.id,
-        "size":file.size,
-        "type":file.obj_type,
-        "created_at":file.created_at,
-        "is_shared": True,
-        "owner_name": file.owner.f_name + " " + file.owner.l_name,
-        "owner_email": file.owner.email,
-        "owner_image": file.owner.picture,
-    } for file in shared_files]
-    
-    response = Response(shared_files,status=status.HTTP_200_OK)
-    response.set_cookie(
-        key="access_token",
-        value=request.COOKIES.get("access_token"),
-        httponly=True,
-        secure=True,
-        samesite="None",
-        max_age=15 * 60
-    )
-    return response
-
-@api_view(["GET"])
-@authentication_classes([AccessTokenAuthentication])
-def get_photos(request):
-    user = request.user
-    photos = user.files.filter(obj_type__startswith="image/")
-    photos = [{
-        "name":file.name,
-        "id":file.id,
-        "size":file.size,
-        "type":file.obj_type,
-        "created_at":file.created_at,
-        "is_shared": file.shared.exists() or file.access == "ANYONE",
-        "url":"dummyurl"
-    }
-    for file in photos]
-    
-    response = Response(photos,status=status.HTTP_200_OK)
-    response.set_cookie(
-        key="access_token",
-        value=request.COOKIES.get("access_token"),
-        httponly=True,
-        secure=True,
-        samesite="None",
-        max_age=15 * 60
-    )
-    return response
-
-@api_view(["PUT"])
-@authentication_classes([AccessTokenAuthentication])
-def file_share(request):
-    user = request.user
-    try:
-        file_id = request.data.get("file_id")
-        file = user.files.get(pk=file_id)
-    except File.DoesNotExist:
-        return Response({"error":"File not found."},status=status.HTTP_400_BAD_REQUEST)
-    except:
-        return Response({"error":"Invalid file ID."},status=status.HTTP_400_BAD_REQUEST)
-    anyone = request.data.get("anyone")
-    email = request.data.get("email")
-    response = Response(status=status.HTTP_204_NO_CONTENT)
-    response.set_cookie(
-        key="access_token",
-        value=request.COOKIES.get("access_token"),
-        httponly=True,
-        secure=True,
-        samesite="None",
-        max_age=15 * 60
-    )
-    if anyone:
-        file.access = 'ANYONE'
-        file.save()
-        print("here1")
-        return response
-    elif email != "":
-        try:
-            user2 = User.objects.find(email=email)
-            file.shared.add(user2)
-            file.save()
-            print("here2")
-            return response
-        except:
-            return Response({"error":"Invalid Email ID."},status=status.HTTP_400_BAD_REQUEST)
-    else:
-        return Response({"error":"Invalid request"},status=status.HTTP_400_BAD_REQUEST)

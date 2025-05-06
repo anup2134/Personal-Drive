@@ -17,6 +17,15 @@ class UserSerializer(serializers.ModelSerializer):
             l_name= "" if "l_name" not in validated_data else validated_data['l_name']
         )
 
+class FileOwnerSerializer(serializers.ModelSerializer):
+    owner_name = serializers.CharField(source="full_name",read_only=True)
+    owner_email = serializers.CharField(source="email")
+    owner_image = serializers.CharField(source="picture")
+
+    class Meta:
+        model = User
+        fields = ["owner_name","owner_email","owner_image"]
+
 class GoogleUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

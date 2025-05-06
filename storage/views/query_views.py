@@ -24,7 +24,7 @@ class QueryDocView(APIView):
 
         user = request.user
         try:
-            user.files.get(pk=int(file_id))
+            file = user.files.get(pk=file_id)
         except File.DoesNotExist:
             return Response({"message":"file not found"},status=status.HTTP_404_NOT_FOUND)
         except:
@@ -39,7 +39,7 @@ class QueryDocView(APIView):
             api_key=settings.HF_TOKEN,
             model_name="sentence-transformers/all-mpnet-base-v2"
         )
-        vector_store = PineconeVectorStore(embedding=embeddings, index=index, namespace=file_id)
+        vector_store = PineconeVectorStore(embedding=embeddings, index=index, namespace=str(file.id))
 
         results = vector_store.similarity_search(
             query=query,

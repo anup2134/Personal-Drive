@@ -242,11 +242,13 @@ def search_files_folders(request):
     name = request.query_params.get("name")
 
     try:
-        files = user.files.filter(name__startswith=name)
-        folders = user.folders.filter(name__startswith=name)
-
-        files = FileSerializer(files,many=True)
-        folders = FolderSerializer(folders,many=True)
+        files = user.files.filter(name__icontains=name)
+        # files = user.files.all()
+        folders = user.folders.filter(name__icontains=name)
+        print(files)
+        print(folders)
+        files = FileSerializer(files,many=True).data
+        folders = FolderSerializer(folders,many=True).data
 
         response = Response({"files":files,"folders":folders},status=status.HTTP_200_OK)
         response.set_cookie(

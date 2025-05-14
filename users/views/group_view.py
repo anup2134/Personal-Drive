@@ -63,26 +63,3 @@ def groups(request:Request):
     response.data["message"] = "Group created."
     response.status_code = 201
     return response
-
-@api_view(["GET"])
-@authentication_classes([AccessTokenAuthentication])
-def get_groups(request:Request):
-    user = request.user
-    owned_groups = user.group_owner.all()
-    admin_groups = user.group_admin.all()
-    groups = user.group_users.all()
-
-    res1 = [{"name":group.name,"id":group.id} for group in owned_groups]
-    res2 = [{"name":group.name,"id":group.id} for group in groups]
-    res3 = [{"name":group.name,"id":group.id} for group in admin_groups]
-
-    response = Response({"owned_groups":res1,"groups":res3,"admin_groups":res2},status=status.HTTP_200_OK)
-    response.set_cookie(
-        key="access_token",
-        value=request.COOKIES.get("access_token"),
-        httponly=True,
-        secure=True,
-        samesite="None",
-        max_age=15 * 60
-    )
-    return response

@@ -61,5 +61,4 @@ def delete_from_s3(object_key:str) -> bool:
     except NoCredentialsError:
         return
     except Exception as e:
-        # print(f"Error deleting file from S3: {e}")
         return 

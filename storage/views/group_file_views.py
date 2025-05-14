@@ -80,7 +80,6 @@ def upload_file_to_group(request):
         samesite="None",
         max_age=15 * 60
     )
-    # print("sending response")
     return response
     
     

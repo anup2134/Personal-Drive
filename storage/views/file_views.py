@@ -245,8 +245,6 @@ def search_files_folders(request):
         files = user.files.filter(name__icontains=name)
         # files = user.files.all()
         folders = user.folders.filter(name__icontains=name)
-        print(files)
-        print(folders)
         files = FileSerializer(files,many=True).data
         folders = FolderSerializer(folders,many=True).data
 

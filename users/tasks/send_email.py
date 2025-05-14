@@ -9,9 +9,8 @@ from celery import shared_task
 @shared_task
 def send_email(user_id):
     user = User.objects.get(id=user_id)
-    # print("getting user")
+
     if not user:
-        # print("user not found")
         raise ValueError("No user found")
     token = str(uuid.uuid4())
     EmailVerificationToken.objects.create(
@@ -19,7 +18,6 @@ def send_email(user_id):
         token=token,
         expires_at=timezone.now() + timedelta(hours=1)
     )
-    # print("sending mail")
     try:
         send_mail(
             subject="Email Verification Personal Drive",
@@ -28,6 +26,5 @@ def send_email(user_id):
             recipient_list=[user.email],
             fail_silently=False,
         )
-        # print("mail sent successfully")
     except Exception as e:
         print("smtp error: ",e)

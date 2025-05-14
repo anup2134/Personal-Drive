@@ -34,7 +34,6 @@ class RegisterViewSet(viewsets.ViewSet):
             return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
         
         users = User.objects.all()
-        # print(request.user)
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -61,7 +60,6 @@ def get_verified_users(request):
         return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
     verified = User.objects.filter(is_active=True)
     verified_users = [{"password": user.password, "email": user.email,"limit":user.limit,"id":user.id} for user in verified]
-    # print(verified_users)
     return Response({'verified users':verified_users},status=status.HTTP_200_OK)
 
 @api_view(["GET"])

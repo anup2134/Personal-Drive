@@ -22,7 +22,6 @@ class AccessTokenAuthentication(BaseAuthentication):
                 request.COOKIES['access_token'] = new_access_token
                 return (user, None)
             except:
-                # print(e)
                 raise AuthenticationFailed("Invalid token.")
 
             

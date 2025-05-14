@@ -46,9 +46,12 @@ router.register("api/v1/user/register",RegisterViewSet,basename="user-register")
 def destroy(request):
     if not settings.DEBUG:  
         return Response({"message": "This endpoint is disabled in production"}, status=status.HTTP_403_FORBIDDEN)
-    # print(email)
+
     email = request.query_params.get("email")
-    User.objects.get(email=email).delete()
+    try:
+        User.objects.get(email=email).delete()
+    except:
+        return Response({"message":"user not found"},status=status.HTTP_404_NOT_FOUND)
     return Response({"message":"user deleted successfully"},status=status.HTTP_204_NO_CONTENT)
 
 

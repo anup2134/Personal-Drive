@@ -51,7 +51,6 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 DEBUG = (os.getenv("ENV") == "DEVELOPMENT")
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
-
 # aws s3 bucket
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
